@@ -1,0 +1,23 @@
+#!/bin/bash
+echo "=== K3s Worker Node Installation ==="
+
+sudo apt update && sudo apt upgrade -y
+NODE_IP="192.168.1.222"
+K3S_TOKEN="$1"
+K3S_URL="https://192.168.1.111:6443"
+
+curl -sfL https://get.k3s.io | K3S_URL=$K3S_URL \
+  K3S_TOKEN=$K3S_TOKEN \
+  INSTALL_K3S_EXEC="agent \
+  --node-ip=$NODE_IP \
+  --node-external-ip=$NODE_IP" sh -
+
+echo "Waiting for K3s agent to start..."
+sleep 20
+sudo systemctl status k3s-agent
+
+export KUBECONFIG=~/homelab/config
+echo "export KUBECONFIG=~/homelab/config" >> ~/.bashrc
+source ~/.bashrc
+
+echo "=== Worker Node Setup Complete ==="

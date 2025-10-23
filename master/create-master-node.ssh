@@ -1,0 +1,68 @@
+#!/bin/bash
+
+echo "
+		=== K3s Master Node Installation ===
+	 "
+
+sudo apt update && sudo apt upgrade -y
+
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+  --node-ip=192.168.1.111 \
+  --node-external-ip=192.168.1.111 \
+  --bind-address=192.168.1.111 \
+  --advertise-address=192.168.1.111 \
+  --disable servicelb \
+  --disable traefik \
+  --write-kubeconfig-mode=644" sh -
+
+echo "Waiting for K3s to be ready..."
+sleep 30
+
+echo "
+		=== Node Token (save this for worker setup) ===
+	 "
+sudo cat /var/lib/rancher/k3s/server/node-token
+
+mkdir -p ~/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+sudo chown $USER:$USER ~/.kube/config
+
+export KUBECONFIG=~/.kube/config
+echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
+
+
+
+kubectl get nodes
+
+echo "=== Installing MetalLB ==="
+
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml
+
+
+echo "Waiting for MetalLB pods to be ready..."
+kubectl wait --namespace metallb-system \
+  --for=condition=ready pod \
+  --selector=app=metallb \
+  --timeout=90s
+
+cat <<EOF | kubectl apply -f -
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.1.112-192.168.1.221 # pool of IP addresses
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - default-pool
+EOF
+
+echo "=== Setup Complete ==="
