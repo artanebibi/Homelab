@@ -2,9 +2,9 @@
 echo "=== K3s Worker Node Installation ==="
 
 sudo apt update && sudo apt upgrade -y
-NODE_IP="192.168.1.222"
+NODE_IP="192.168.1.100"
 K3S_TOKEN="$1"
-K3S_URL="https://192.168.1.111:6443"
+K3S_URL="https://192.168.1.99:6443"
 
 curl -sfL https://get.k3s.io | K3S_URL=$K3S_URL \
   K3S_TOKEN=$K3S_TOKEN \

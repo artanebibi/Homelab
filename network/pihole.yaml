@@ -16,6 +16,19 @@ spec:
     requests:
       storage: 1Gi
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dnsmasq-data
+  namespace: pihole
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 500Mi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,7 +37,7 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:       
+    matchLabels:
       app: pihole
   template:
     metadata:
@@ -32,7 +45,7 @@ spec:
         app: pihole
     spec:
       dnsPolicy: "None"
-      dnsConfig: # previously had errors pulling the image needed for the pod, configuring DNS for pod was needed.
+      dnsConfig:
         nameservers:
           - 8.8.8.8
           - 1.1.1.1
@@ -68,7 +81,8 @@ spec:
           persistentVolumeClaim:
             claimName: pihole-data
         - name: dnsmasq-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: dnsmasq-data
 ---
 apiVersion: v1
 kind: Service
@@ -81,7 +95,7 @@ spec:
     app: pihole
   ports:
     - name: http
-      port: 8080
+      port: 80
       targetPort: 80
       protocol: TCP
 ---
@@ -90,6 +104,8 @@ kind: Service
 metadata:
   name: pihole-dns-tcp
   namespace: pihole
+  annotations:
+    metallb.universe.tf/allow-shared-ip: pihole-dns
 spec:
   type: LoadBalancer
   selector:
@@ -105,6 +121,8 @@ kind: Service
 metadata:
   name: pihole-dns-udp
   namespace: pihole
+  annotations:
+    metallb.universe.tf/allow-shared-ip: pihole-dns
 spec:
   type: LoadBalancer
   selector:
@@ -113,4 +131,4 @@ spec:
     - name: dns-udp
       port: 53
       targetPort: 53
-      protocol: UDP
+      protocol: UDP 
