@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+# if helm is not installed in current node:
+# curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+echo "==== Installing Prometheus Operator ===="
+
+echo "Adding Helm repository..."
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+echo "Creating monitoring namespace..."
+kubectl create namespace monitoring
+
+echo "==== Installing stack (takes 2-3 minutes) ===="
+
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+  --set grafana.adminPassword=admin \
+  --set grafana.service.type=LoadBalancer \
+  --set prometheus.service.type=LoadBalancer
+
+echo "Script is done."
