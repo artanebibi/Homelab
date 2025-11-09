@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: demo-app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-demo
+  namespace: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics-demo
+  template:
+    metadata:
+      labels:
+        app: metrics-demo
+    spec:
+      containers:
+      - name: app
+        image: ghcr.io/stefanprodan/podinfo:latest # Podinfo - small app made specifically for k8s testing
+        ports:
+        - containerPort: 9898
+          name: http
+        - containerPort: 9797
+          name: metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics-demo
+  namespace: demo-app
+  labels:
+    app: metrics-demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: metrics-demo
+  ports:
+  - port: 80
+    targetPort: 9898
+    name: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor # CRD for Prometheus operator
+metadata:
+  name: metrics-demo
+  namespace: demo-app
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: metrics-demo
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
